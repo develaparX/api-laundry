@@ -1,4 +1,4 @@
-# Aplikasi Enigma Laundry
+# Aplikasi Enigma Laundry dengan golang
 
 ### Deskripsi
 
@@ -27,7 +27,7 @@ Fitur-fitur yang diminta oleh manajemen EL adalah:
 
 3.  Dokumentasi cara menjalankan aplikasi dan penggunaan aplikasi dalam bentuk readme.md atau dokumen ektensi word atau pdf
 
-- - -
+---
 
 ## API Spec
 
@@ -137,6 +137,128 @@ Request :
 
 - Method : DELETE
 - Endpoint : `/customers/:id`
+- Header :
+  - Accept : application/json
+- Body :
+
+Response :
+
+- Status : 200 OK
+- Body :
+
+```json
+{
+  "message": "string",
+  "data": "OK"
+}
+```
+
+### Employee API
+
+#### Create Employee
+
+Request :
+
+- Method : `POST`
+- Endpoint : `/employees`
+- Header :
+  - Content-Type : application/json
+  - Accept : application/json
+- Body :
+
+```json
+{
+  "name": "string",
+  "phoneNumber": "string",
+  "address": "string"
+}
+```
+
+Response :
+
+- Status : 201 Created
+- Body :
+
+```json
+{
+  "message": "string",
+  "data": {
+    "id": "string",
+    "name": "string",
+    "phoneNumber": "string",
+    "address": "string"
+  }
+}
+```
+
+#### Get Employee
+
+Request :
+
+- Method : GET
+- Endpoint : `/employees/:id`
+- Header :
+  - Accept : application/json
+
+Response :
+
+- Status : 200 OK
+- Body :
+
+```json
+{
+  "message": "string",
+  "data": {
+    "id": "string",
+    "name": "string",
+    "phoneNumber": "string",
+    "address": "string"
+  }
+}
+```
+
+#### Update Employee
+
+Request :
+
+- Method : PUT
+- Endpoint : `/employees/:id`
+- Header :
+  - Content-Type : application/json
+  - Accept : application/json
+- Body :
+
+```json
+{
+  "name": "string",
+  "phoneNumber": "string",
+  "address": "string"
+}
+```
+
+Response :
+
+- Status : 200 OK
+- Body :
+
+```json
+{
+  "message": "string",
+  "data": {
+    "id": "string",
+    "name": "string",
+    "phoneNumber": "string",
+    "address": "string"
+  }
+}
+```
+
+#### Delete Employee
+
+Request :
+
+- Method : DELETE
+- Endpoint : `/employees/:id`
 - Header :
   - Accept : application/json
 - Body :

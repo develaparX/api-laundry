@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"enigma-laundry/config"
 	"enigma-laundry/models"
 	"net/http"
@@ -33,4 +34,51 @@ func CreateCustomer(c *gin.Context) {
 		"message": "Customer created successfully",
 		"data":    newCustomer,
 	})
+}
+
+func GetAllCustomers(c *gin.Context) {
+	searchId := c.Query("id")
+
+	query := "SELECT id, name, phone_number, address FROM customers"
+
+	var rows *sql.Rows
+	var err error
+
+	if searchId != "" {
+		query += " WHERE id=$1"
+		rows, err = db.Query(query, searchId)
+	} else {
+		rows, err = db.Query(query)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Internal Server Error"})
+		return
+	}
+	defer rows.Close()
+
+	var matchedCustomer []models.Customer
+
+	for rows.Next() {
+		var customer models.Customer
+
+		err := rows.Scan(&customer.ID, &customer.Name, &customer.PhoneNumber, &customer.Address)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Internal Server Error",
+			})
+			return
+		}
+		matchedCustomer = append(matchedCustomer, customer)
+	}
+
+	if len(matchedCustomer) > 0 {
+		c.JSON(http.StatusOK, matchedCustomer)
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Customer not found",
+		})
+	}
+
 }

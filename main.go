@@ -10,9 +10,10 @@ func main() {
 	// Tulis kode kamu disini
 	router := gin.Default()
 
-	customers := router.Group("/customers")
+	customersGroup := router.Group("/customers")
 	{
-		customers.POST("/", handlers.CreateCustomer)
+		customersGroup.POST("/", handlers.CreateCustomer)
+		customersGroup.GET("/", handlers.GetAllCustomers)
 	}
 
 	router.Run(":8000")

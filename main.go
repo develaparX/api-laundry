@@ -14,6 +14,8 @@ func main() {
 	{
 		customersGroup.POST("/", handlers.CreateCustomer)
 		customersGroup.GET("/", handlers.GetAllCustomers)
+		customersGroup.GET("/:id", handlers.GetAllCustomers)
+		customersGroup.PUT("/:id", handlers.UpdateCustomer)
 	}
 
 	router.Run(":8000")

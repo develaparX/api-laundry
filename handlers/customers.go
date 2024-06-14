@@ -5,6 +5,8 @@ import (
 	"enigma-laundry/config"
 	"enigma-laundry/models"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,7 +39,7 @@ func CreateCustomer(c *gin.Context) {
 }
 
 func GetAllCustomers(c *gin.Context) {
-	searchId := c.Query("id")
+	searchId := c.Param("id")
 
 	query := "SELECT id, name, phone_number, address FROM customers"
 
@@ -81,4 +83,52 @@ func GetAllCustomers(c *gin.Context) {
 		})
 	}
 
+}
+
+func UpdateCustomer(c *gin.Context) {
+	id := c.Param("id")
+
+	customerId, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid customer id"})
+	}
+
+	var updatedCustomer models.Customer
+	if err := c.ShouldBindJSON(&updatedCustomer); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	//mengambil data pelanggan yang ada di database berdasarkan ID
+	var existingCustomer models.Customer
+	query := `SELECT id, name, phone_number, address FROM customers WHERE id=$1;`
+	err = db.QueryRow(query, customerId).Scan(&existingCustomer.ID, &existingCustomer.Name, &existingCustomer.PhoneNumber, &existingCustomer.Address)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Customer not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch customer"})
+		}
+		return
+	}
+
+	// Pengkondisian: jika setiap field tidak kosong, kita akan update datanya. Jika kosong, kita akan menggunakan data sebelumnya atau partial update
+	if strings.TrimSpace(updatedCustomer.Name) != "" {
+		existingCustomer.Name = updatedCustomer.Name
+	}
+	if strings.TrimSpace(updatedCustomer.PhoneNumber) != "" {
+		existingCustomer.PhoneNumber = updatedCustomer.PhoneNumber
+	}
+	if strings.TrimSpace(updatedCustomer.Address) != "" {
+		existingCustomer.Address = updatedCustomer.Address
+	}
+
+	// Update data pelanggan di database
+	updateQuery := `UPDATE customers SET name=$1, phone_number=$2, address=$3 WHERE id=$4`
+	_, err = db.Exec(updateQuery, existingCustomer.Name, existingCustomer.PhoneNumber, existingCustomer.Address, customerId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update customer"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Customer updated successfully", "data": existingCustomer})
 }

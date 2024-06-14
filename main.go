@@ -16,6 +16,7 @@ func main() {
 		customersGroup.GET("/", handlers.GetAllCustomers)
 		customersGroup.GET("/:id", handlers.GetAllCustomers)
 		customersGroup.PUT("/:id", handlers.UpdateCustomer)
+		customersGroup.DELETE("/:id", handlers.DeleteCustomerById)
 	}
 
 	router.Run(":8000")

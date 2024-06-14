@@ -13,6 +13,11 @@ import (
 
 var db = config.ConnectDB()
 
+type Response struct {
+	Message string          `json:"message"`
+	Data    models.Customer `json:"data"`
+}
+
 func CreateCustomer(c *gin.Context) {
 	var newCustomer models.Customer
 	err := c.ShouldBind(&newCustomer)
@@ -130,5 +135,33 @@ func UpdateCustomer(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update customer"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Customer updated successfully", "data": existingCustomer})
+	// c.JSON(http.StatusOK, gin.H{"message": "Customer updated successfully", "data": existingCustomer})
+	// Membuat respons dengan struktur yang diinginkan
+	response := Response{
+		Message: "Customer updated successfully",
+		Data:    existingCustomer,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func DeleteCustomerById(c *gin.Context) {
+	id := c.Param("id")
+
+	customerId, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid customer Id"})
+		return
+	}
+
+	query := `DELETE FROM customers WHERE id=$1;`
+	_, err = db.Exec(query, customerId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to delete customer"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Customer deleted successfully",
+		"data":    "OK",
+	})
 }

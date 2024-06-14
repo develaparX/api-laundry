@@ -32,6 +32,17 @@ func CreateCustomer(c *gin.Context) {
 		return
 	}
 
+	// Validasi phone_number
+	phoneNumber := newCustomer.PhoneNumber
+	if _, err := strconv.Atoi(phoneNumber); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number must be numeric"})
+		return
+	}
+	if len(phoneNumber) <= 10 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number must be more than 10 digits"})
+		return
+	}
+
 	//simpan data ke database
 	query := "INSERT INTO customers(name, phone_number, address) VALUES ($1,$2,$3) RETURNING id"
 
@@ -134,6 +145,15 @@ func UpdateCustomer(c *gin.Context) {
 		existingCustomer.Name = updatedCustomer.Name
 	}
 	if strings.TrimSpace(updatedCustomer.PhoneNumber) != "" {
+		phoneNumber := updatedCustomer.PhoneNumber
+		if _, err := strconv.Atoi(phoneNumber); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number must be numeric"})
+			return
+		}
+		if len(phoneNumber) <= 10 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number must be more than 10 digits"})
+			return
+		}
 		existingCustomer.PhoneNumber = updatedCustomer.PhoneNumber
 	}
 	if strings.TrimSpace(updatedCustomer.Address) != "" {

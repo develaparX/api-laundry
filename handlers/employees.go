@@ -29,6 +29,17 @@ func CreateEmployee(c *gin.Context) {
 		return
 	}
 
+	// Validasi phone_number
+	phoneNumber := newEmployee.PhoneNumber
+	if _, err := strconv.Atoi(phoneNumber); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number must be numeric"})
+		return
+	}
+	if len(phoneNumber) <= 10 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number must be more than 10 digits"})
+		return
+	}
+
 	//simpan data ke database
 	query := "INSERT INTO Employees(name, phone_number, address) VALUES ($1,$2,$3) RETURNING id"
 
@@ -131,6 +142,15 @@ func UpdateEmployee(c *gin.Context) {
 		existingEmployee.Name = updatedEmployee.Name
 	}
 	if strings.TrimSpace(updatedEmployee.PhoneNumber) != "" {
+		phoneNumber := updatedEmployee.PhoneNumber
+		if _, err := strconv.Atoi(phoneNumber); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number must be numeric"})
+			return
+		}
+		if len(phoneNumber) <= 10 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number must be more than 10 digits"})
+			return
+		}
 		existingEmployee.PhoneNumber = updatedEmployee.PhoneNumber
 	}
 	if strings.TrimSpace(updatedEmployee.Address) != "" {

@@ -19,5 +19,14 @@ func main() {
 		customersGroup.DELETE("/:id", handlers.DeleteCustomerById)
 	}
 
+	employeesGroup := router.Group("/employees")
+	{
+		employeesGroup.POST("/", handlers.CreateEmployee)
+		employeesGroup.GET("/", handlers.GetAllEmployees)
+		employeesGroup.GET("/:id", handlers.GetAllEmployees)
+		employeesGroup.PUT("/:id", handlers.UpdateEmployee)
+		employeesGroup.DELETE("/:id", handlers.DeleteEmployeeById)
+	}
+
 	router.Run(":8000")
 }

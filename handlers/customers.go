@@ -18,6 +18,11 @@ type Response struct {
 	Data    models.Customer `json:"data"`
 }
 
+type ResponseList struct {
+	Message string            `json:"message"`
+	Data    []models.Customer `json:"data"`
+}
+
 func CreateCustomer(c *gin.Context) {
 	var newCustomer models.Customer
 	err := c.ShouldBind(&newCustomer)
@@ -37,10 +42,12 @@ func CreateCustomer(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Customer created successfully",
-		"data":    newCustomer,
-	})
+	response := Response{
+		Message: "Customer created successfully",
+		Data:    newCustomer,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func GetAllCustomers(c *gin.Context) {
@@ -80,8 +87,13 @@ func GetAllCustomers(c *gin.Context) {
 		matchedCustomer = append(matchedCustomer, customer)
 	}
 
+	response := ResponseList{
+		Message: "Customer updated successfully",
+		Data:    matchedCustomer,
+	}
+
 	if len(matchedCustomer) > 0 {
-		c.JSON(http.StatusOK, matchedCustomer)
+		c.JSON(http.StatusOK, response)
 	} else {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Customer not found",
@@ -136,6 +148,7 @@ func UpdateCustomer(c *gin.Context) {
 		return
 	}
 	// c.JSON(http.StatusOK, gin.H{"message": "Customer updated successfully", "data": existingCustomer})
+
 	// Membuat respons dengan struktur yang diinginkan
 	response := Response{
 		Message: "Customer updated successfully",
@@ -164,4 +177,5 @@ func DeleteCustomerById(c *gin.Context) {
 		"message": "Customer deleted successfully",
 		"data":    "OK",
 	})
+
 }

@@ -37,5 +37,12 @@ func main() {
 		productsGroup.DELETE("/:id", handlers.DeleteProductById)
 	}
 
-	router.Run(":8000")
+	transactionsGroup := router.Group("/transactions")
+	{
+		transactionsGroup.POST("/", handlers.CreateTransaction)
+		transactionsGroup.GET("/:id", handlers.GetTransaction)
+		// transactionsGroup.GET("/", handlers.GetAllTransactions)
+	}
+
+	router.Run(":8080")
 }

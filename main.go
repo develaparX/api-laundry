@@ -40,8 +40,8 @@ func main() {
 	transactionsGroup := router.Group("/transactions")
 	{
 		transactionsGroup.POST("/", handlers.CreateTransaction)
-		transactionsGroup.GET("/:id", handlers.GetTransaction)
-		// transactionsGroup.GET("/", handlers.GetAllTransactions)
+		transactionsGroup.GET("/:id", handlers.GetTransactionByID)
+		transactionsGroup.GET("/", handlers.GetTransactions)
 	}
 
 	router.Run(":8080")

@@ -29,13 +29,28 @@ func CreateProduct(c *gin.Context) {
 		return
 	}
 
-	//simpan data ke database
-	query := "INSERT INTO Products(name, price, unit) VALUES ($1,$2,$3) RETURNING id"
+	// Mulai transaksi
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
 
-	err = db.QueryRow(query, newProduct.Name, newProduct.Price, newProduct.Unit).Scan(&newProduct.ID)
+	// Simpan data ke database
+	query := "INSERT INTO Products(name, price, unit) VALUES ($1,$2,$3) RETURNING id"
+	err = tx.QueryRow(query, newProduct.Name, newProduct.Price, newProduct.Unit).Scan(&newProduct.ID)
 
 	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new Product"})
+		return
+	}
+
+	// Commit transaksi jika tidak ada error
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
 	}
 
@@ -137,14 +152,29 @@ func UpdateProduct(c *gin.Context) {
 		existingProduct.Unit = updatedProduct.Unit
 	}
 
+	// Mulai transaksi
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+
 	// Update data pelanggan di database
 	updateQuery := `UPDATE products SET name=$1, price=$2, unit=$3 WHERE id=$4`
-	_, err = db.Exec(updateQuery, existingProduct.Name, existingProduct.Price, existingProduct.Unit, ProductId)
+	_, err = tx.Exec(updateQuery, existingProduct.Name, existingProduct.Price, existingProduct.Unit, ProductId)
 	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update Product"})
 		return
 	}
-	// c.JSON(http.StatusOK, gin.H{"message": "Product updated successfully", "data": existingProduct})
+
+	// Commit transaksi jika tidak ada error
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		return
+	}
 
 	// Membuat respons dengan struktur yang diinginkan
 	response := ResponseProduct{
@@ -164,15 +194,31 @@ func DeleteProductById(c *gin.Context) {
 		return
 	}
 
-	query := `DELETE FROM products WHERE id=$1;`
-	_, err = db.Exec(query, ProductId)
+	// Mulai transaksi
+	tx, err := db.Begin()
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+
+	query := `DELETE FROM products WHERE id=$1;`
+	_, err = tx.Exec(query, ProductId)
+	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to delete Product"})
 		return
 	}
+
+	// Commit transaksi jika tidak ada error
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Product deleted successfully",
 		"data":    "OK",
 	})
-
 }

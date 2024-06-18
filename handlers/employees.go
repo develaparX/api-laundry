@@ -40,13 +40,26 @@ func CreateEmployee(c *gin.Context) {
 		return
 	}
 
-	//simpan data ke database
-	query := "INSERT INTO Employees(name, phone_number, address) VALUES ($1,$2,$3) RETURNING id"
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
 
-	err = db.QueryRow(query, newEmployee.Name, newEmployee.PhoneNumber, newEmployee.Address).Scan(&newEmployee.ID)
+	// Simpan data ke database
+	query := "INSERT INTO Employees(name, phone_number, address) VALUES ($1,$2,$3) RETURNING id"
+	err = tx.QueryRow(query, newEmployee.Name, newEmployee.PhoneNumber, newEmployee.Address).Scan(&newEmployee.ID)
 
 	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new Employee"})
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
 	}
 
@@ -124,7 +137,7 @@ func UpdateEmployee(c *gin.Context) {
 		return
 	}
 
-	//mengambil data pelanggan yang ada di database berdasarkan ID
+	// Mengambil data pelanggan yang ada di database berdasarkan ID
 	var existingEmployee models.Employee
 	query := `SELECT id, name, phone_number, address FROM Employees WHERE id=$1;`
 	err = db.QueryRow(query, EmployeeId).Scan(&existingEmployee.ID, &existingEmployee.Name, &existingEmployee.PhoneNumber, &existingEmployee.Address)
@@ -157,16 +170,28 @@ func UpdateEmployee(c *gin.Context) {
 		existingEmployee.Address = updatedEmployee.Address
 	}
 
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+
 	// Update data pelanggan di database
 	updateQuery := `UPDATE Employees SET name=$1, phone_number=$2, address=$3 WHERE id=$4`
-	_, err = db.Exec(updateQuery, existingEmployee.Name, existingEmployee.PhoneNumber, existingEmployee.Address, EmployeeId)
+	_, err = tx.Exec(updateQuery, existingEmployee.Name, existingEmployee.PhoneNumber, existingEmployee.Address, EmployeeId)
 	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update Employee"})
 		return
 	}
-	// c.JSON(http.StatusOK, gin.H{"message": "Employee updated successfully", "data": existingEmployee})
 
-	// Membuat respons dengan struktur yang diinginkan
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		return
+	}
+
 	response := ResponseEmployee{
 		Message: "Employee updated successfully",
 		Data:    existingEmployee,
@@ -184,12 +209,27 @@ func DeleteEmployeeById(c *gin.Context) {
 		return
 	}
 
-	query := `DELETE FROM Employees WHERE id=$1;`
-	_, err = db.Exec(query, EmployeeId)
+	tx, err := db.Begin()
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+
+	query := `DELETE FROM Employees WHERE id=$1;`
+	_, err = tx.Exec(query, EmployeeId)
+	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to delete Employee"})
 		return
 	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to commit transaction"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Employee deleted successfully",
 		"data":    "OK",

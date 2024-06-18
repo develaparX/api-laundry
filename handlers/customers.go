@@ -43,13 +43,26 @@ func CreateCustomer(c *gin.Context) {
 		return
 	}
 
-	//simpan data ke database
-	query := "INSERT INTO customers(name, phone_number, address) VALUES ($1,$2,$3) RETURNING id"
-
-	err = db.QueryRow(query, newCustomer.Name, newCustomer.PhoneNumber, newCustomer.Address).Scan(&newCustomer.ID)
-
+	// Memulai transaksi
+	tx, err := db.Begin()
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+
+	// Simpan data ke database
+	query := "INSERT INTO customers(name, phone_number, address) VALUES ($1,$2,$3) RETURNING id"
+	err = tx.QueryRow(query, newCustomer.Name, newCustomer.PhoneNumber, newCustomer.Address).Scan(&newCustomer.ID)
+	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new customer"})
+		return
+	}
+
+	// Commit transaksi
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
 	}
 
@@ -110,7 +123,6 @@ func GetAllCustomers(c *gin.Context) {
 			"error": "Customer not found",
 		})
 	}
-
 }
 
 func UpdateCustomer(c *gin.Context) {
@@ -119,6 +131,7 @@ func UpdateCustomer(c *gin.Context) {
 	customerId, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid customer id"})
+		return
 	}
 
 	var updatedCustomer models.Customer
@@ -127,11 +140,19 @@ func UpdateCustomer(c *gin.Context) {
 		return
 	}
 
-	//mengambil data pelanggan yang ada di database berdasarkan ID
+	// Memulai transaksi
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+
+	// Mengambil data pelanggan yang ada di database berdasarkan ID
 	var existingCustomer models.Customer
 	query := `SELECT id, name, phone_number, address FROM customers WHERE id=$1;`
-	err = db.QueryRow(query, customerId).Scan(&existingCustomer.ID, &existingCustomer.Name, &existingCustomer.PhoneNumber, &existingCustomer.Address)
+	err = tx.QueryRow(query, customerId).Scan(&existingCustomer.ID, &existingCustomer.Name, &existingCustomer.PhoneNumber, &existingCustomer.Address)
 	if err != nil {
+		tx.Rollback()
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Customer not found"})
 		} else {
@@ -147,10 +168,12 @@ func UpdateCustomer(c *gin.Context) {
 	if strings.TrimSpace(updatedCustomer.PhoneNumber) != "" {
 		phoneNumber := updatedCustomer.PhoneNumber
 		if _, err := strconv.Atoi(phoneNumber); err != nil {
+			tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number must be numeric"})
 			return
 		}
 		if len(phoneNumber) <= 10 {
+			tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number must be more than 10 digits"})
 			return
 		}
@@ -162,12 +185,19 @@ func UpdateCustomer(c *gin.Context) {
 
 	// Update data pelanggan di database
 	updateQuery := `UPDATE customers SET name=$1, phone_number=$2, address=$3 WHERE id=$4`
-	_, err = db.Exec(updateQuery, existingCustomer.Name, existingCustomer.PhoneNumber, existingCustomer.Address, customerId)
+	_, err = tx.Exec(updateQuery, existingCustomer.Name, existingCustomer.PhoneNumber, existingCustomer.Address, customerId)
 	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update customer"})
 		return
 	}
-	// c.JSON(http.StatusOK, gin.H{"message": "Customer updated successfully", "data": existingCustomer})
+
+	// Commit transaksi
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		return
+	}
 
 	// Membuat respons dengan struktur yang diinginkan
 	response := Response{
@@ -197,5 +227,4 @@ func DeleteCustomerById(c *gin.Context) {
 		"message": "Customer deleted successfully",
 		"data":    "OK",
 	})
-
 }

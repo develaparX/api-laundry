@@ -46,24 +46,24 @@ Buat database PostgreSQL sesuai dengan desain database yang telah Anda buat. Jal
 # Konfigurasi Aplikasi
 Edit hal dibawah ini yang berada di file config/config.go:
 
-makefile
-Copy code
+
+```json
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=<USER_POSTGRESQL>
 DB_PASSWORD=<PASSWORD_POSTGRESQL>
 DB_NAME=<NAMA_DATABASE>
-Install Dependencies
+```
 
-go
-Copy code
+# Install Dependencies
+```json
 go mod tidy
+```
 
 # Menjalankan Aplikasi
 
-go
-Copy code
 go run main.go
+
 Aplikasi akan berjalan pada localhost dengan port yang telah Anda tentukan di dalam kode sumber (8080).
 
 # Cara Menggunakan API

@@ -28,6 +28,47 @@ Fitur-fitur yang diminta oleh manajemen EL adalah:
 3.  Dokumentasi cara menjalankan aplikasi dan penggunaan aplikasi dalam bentuk readme.md atau dokumen ektensi word atau pdf
 
 ---
+# Cara Menjalankan Aplikasi
+Prasyarat
+Go (Golang) versi terbaru sudah terinstal di sistem Anda.
+PostgreSQL sudah terinstal dan berjalan di sistem Anda.
+Postman atau aplikasi lain yang dapat digunakan untuk menguji endpoint API.
+Langkah-Langkah
+Clone Repository
+
+bash
+Copy code
+git clone <URL_REPOSITORY>
+cd <NAMA_REPOSITORY>
+Konfigurasi Database
+Buat database PostgreSQL sesuai dengan desain database yang telah Anda buat. Jalankan script DDL dan DML untuk membuat dan mengisi tabel yang diperlukan.
+
+# Konfigurasi Aplikasi
+Edit hal dibawah ini yang berada di file config/config.go:
+
+makefile
+Copy code
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=<USER_POSTGRESQL>
+DB_PASSWORD=<PASSWORD_POSTGRESQL>
+DB_NAME=<NAMA_DATABASE>
+Install Dependencies
+
+go
+Copy code
+go mod tidy
+
+# Menjalankan Aplikasi
+
+go
+Copy code
+go run main.go
+Aplikasi akan berjalan pada localhost dengan port yang telah Anda tentukan di dalam kode sumber (8080).
+
+# Cara Menggunakan API
+
+---
 
 ## API Spec
 

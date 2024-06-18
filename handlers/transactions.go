@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -22,9 +23,32 @@ type ResponseTransactionByID struct {
 }
 
 func GetTransactions(c *gin.Context) {
-	startDate := c.Query("startDate")
-	endDate := c.Query("endDate")
+	startDateStr := c.Query("startDate")
+	endDateStr := c.Query("endDate")
 	productName := c.Query("productName")
+
+	// Parsing tanggal dari format dd-MM-yyyy ke format yyyy-MM-dd
+	const layout = "02-01-2006"
+	var startDate, endDate string
+	var err error
+
+	if startDateStr != "" {
+		parsedStartDate, err := time.Parse(layout, startDateStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Format tanggal startDate tidak valid. Gunakan format dd-MM-yyyy."})
+			return
+		}
+		startDate = parsedStartDate.Format("2006-01-02")
+	}
+
+	if endDateStr != "" {
+		parsedEndDate, err := time.Parse(layout, endDateStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Format tanggal endDate tidak valid. Gunakan format dd-MM-yyyy."})
+			return
+		}
+		endDate = parsedEndDate.Format("2006-01-02")
+	}
 
 	baseQuery := `
     SELECT

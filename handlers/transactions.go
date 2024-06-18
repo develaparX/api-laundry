@@ -3,6 +3,7 @@ package handlers
 import (
 	"enigma-laundry/models"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +12,11 @@ import (
 )
 
 type ResponseTransaction struct {
+	Message string               `json:"message"`
+	Data    []models.Transaction `json:"data"`
+}
+
+type ResponseTransactionByID struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`
 }
@@ -54,19 +60,19 @@ func GetTransactions(c *gin.Context) {
 	paramIndex := 1
 
 	if startDate != "" {
-		conditions = append(conditions, "t.bill_date >= $"+string(paramIndex))
+		conditions = append(conditions, "t.bill_date >= $"+strconv.Itoa(paramIndex))
 		params = append(params, startDate)
 		paramIndex++
 	}
 
 	if endDate != "" {
-		conditions = append(conditions, "t.bill_date <= $"+string(paramIndex))
+		conditions = append(conditions, "t.bill_date <= $"+strconv.Itoa(paramIndex))
 		params = append(params, endDate)
 		paramIndex++
 	}
 
 	if productName != "" {
-		conditions = append(conditions, "p.name ILIKE '%' || $"+string(paramIndex)+" || '%'")
+		conditions = append(conditions, "p.name ILIKE '%' || $"+strconv.Itoa(paramIndex)+" || '%'")
 		params = append(params, productName)
 		paramIndex++
 	}
@@ -75,8 +81,23 @@ func GetTransactions(c *gin.Context) {
 		baseQuery += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	rows, err := db.Query(baseQuery, params...)
+	// Mulai transaksi
+	tx, err := db.Begin()
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memulai transaksi"})
+		return
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Terjadi kesalahan, transaksi dibatalkan"})
+		}
+	}()
+
+	rows, err := tx.Query(baseQuery, params...)
+	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
 	}
@@ -113,6 +134,7 @@ func GetTransactions(c *gin.Context) {
 			&billDetail.Qty,
 		)
 		if err != nil {
+			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 			return
 		}
@@ -134,6 +156,13 @@ func GetTransactions(c *gin.Context) {
 	var result []models.Transaction
 	for _, t := range transactions {
 		result = append(result, *t)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal mengkonfirmasi transaksi"})
+		return
 	}
 
 	response := ResponseTransaction{
@@ -210,6 +239,33 @@ func CreateTransaction(c *gin.Context) {
 func GetTransactionByID(c *gin.Context) {
 	idBill := c.Param("id_bill")
 
+	// Validasi input
+	if idBill == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "ID bill tidak boleh kosong"})
+		return
+	}
+
+	// Coba konversi ke integer untuk validasi lebih lanjut
+	_, err := strconv.Atoi(idBill)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "ID bill harus berupa angka"})
+		return
+	}
+
+	// Mulai transaksi
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memulai transaksi"})
+		return
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Terjadi kesalahan, transaksi dibatalkan"})
+		}
+	}()
+
 	query := `
     SELECT
       t.id,
@@ -240,8 +296,9 @@ func GetTransactionByID(c *gin.Context) {
     WHERE t.id = $1
   `
 
-	rows, err := db.Query(query, idBill)
+	rows, err := tx.Query(query, idBill)
 	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
 	}
@@ -278,6 +335,7 @@ func GetTransactionByID(c *gin.Context) {
 			&billDetail.Qty,
 		)
 		if err != nil {
+			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 			return
 		}
@@ -297,11 +355,19 @@ func GetTransactionByID(c *gin.Context) {
 	}
 
 	if len(transactions) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Transaction not found"})
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{"message": "Transaksi tidak ditemukan"})
 		return
 	}
 
-	response := ResponseTransaction{
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal mengkonfirmasi transaksi"})
+		return
+	}
+
+	response := ResponseTransactionByID{
 		Message: "Success",
 		Data:    transactions[transaction.ID],
 	}

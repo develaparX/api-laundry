@@ -40,7 +40,7 @@ func main() {
 	transactionsGroup := router.Group("/transactions")
 	{
 		transactionsGroup.POST("/", handlers.CreateTransaction)
-		transactionsGroup.GET("/:id", handlers.GetTransactionByID)
+		transactionsGroup.GET("/:id_bill", handlers.GetTransactionByID)
 		transactionsGroup.GET("/", handlers.GetTransactions)
 	}
 

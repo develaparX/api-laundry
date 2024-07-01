@@ -12,3 +12,8 @@ type User struct {
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
+
+//membuat validasi role untuk digunakan di service
+func (u User) IsValidRole() bool {
+	return u.Role == "admin" || u.Role == "employee"
+}

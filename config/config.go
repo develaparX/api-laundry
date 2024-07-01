@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -22,6 +24,9 @@ type AppConfig struct {
 }
 
 type SecurityConfig struct {
+	Key    string
+	Durasi time.Duration
+	Issues string
 }
 
 // struct gabungan dari semua config
@@ -38,6 +43,17 @@ func (c *Config) readConfig() error {
 		fmt.Println(err)
 	}
 
+	lifeTime, err := strconv.Atoi(os.Getenv("JWT_LIFE_TIME"))
+	if err != nil {
+		return err
+	}
+
+	c.SecurityConfig = SecurityConfig{
+		Key:    os.Getenv("JWT_KEY"),
+		Durasi: time.Duration(lifeTime),
+		Issues: os.Getenv("JWT_ISSUER_NAME"),
+	}
+
 	// ngecek value
 	c.DbConfig = DbConfig{
 		Host:     os.Getenv("DB_HOST"),
@@ -47,11 +63,12 @@ func (c *Config) readConfig() error {
 		Password: os.Getenv("DB_PASSWORD"),
 		Driver:   os.Getenv("DB_DRIVER"),
 	}
+
 	c.AppConfig = AppConfig{
 		AppPort: os.Getenv("PORT_APP"),
 	}
 
-	if c.DbConfig.Host == "" || c.DbConfig.Port == "" || c.DbConfig.Name == "" || c.DbConfig.User == "" || c.DbConfig.Password == "" || c.DbConfig.Driver == "" {
+	if c.DbConfig.Host == "" || c.DbConfig.Port == "" || c.DbConfig.Name == "" || c.DbConfig.User == "" || c.DbConfig.Password == "" || c.DbConfig.Driver == "" || c.SecurityConfig.Key == "" || c.SecurityConfig.Durasi < 0 || c.SecurityConfig.Issues == "" {
 		return errors.New("environtment is empty")
 	}
 	return nil

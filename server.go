@@ -3,6 +3,7 @@ package main
 import (
 	"clean-laundry/config"
 	"clean-laundry/controller"
+	"clean-laundry/middleware"
 	"clean-laundry/repository"
 	"clean-laundry/service"
 	"database/sql"
@@ -19,6 +20,8 @@ type Server struct {
 	cS      service.CustomerService
 	pS      service.ProductService
 	uS      service.UserService
+	jS      service.JwtService
+	aM      middleware.AuthMiddleware
 	engine  *gin.Engine //untuk start engine gin
 	portApp string
 }
@@ -28,7 +31,8 @@ func (s *Server) initiateRoute() {
 	//bisa menambah grouping lagi disini
 	routerGroup := s.engine.Group("/api/v1")
 	controller.NewBillController(s.bS, routerGroup).Route()
-	controller.NewProductController(s.pS, routerGroup).Route()
+	controller.NewProductController(s.pS, routerGroup, s.aM).Route()
+	controller.NewUserController(s.uS, routerGroup).Route()
 }
 
 // func untuk running
@@ -56,10 +60,13 @@ func NewServer() *Server {
 	productRepo := repository.NewProductRepository(db)
 	userRepo := repository.NewUserRepository(db)
 
+	jwtService := service.NewJwtService(co.SecurityConfig)
 	custService := service.NewCustomerService(custRepo)
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, jwtService)
 	productService := service.NewProductService(productRepo)
 	billService := service.NewBillService(billRepo, userService, productService, custService)
+
+	authMiddleware := middleware.NewAuthMiddleware(jwtService)
 
 	//menginject repo ke service
 	return &Server{
@@ -67,6 +74,8 @@ func NewServer() *Server {
 		cS:      custService,
 		pS:      productService,
 		uS:      userService,
+		jS:      jwtService,
+		aM:      authMiddleware,
 		portApp: portApp,
 		engine:  gin.Default(),
 	}

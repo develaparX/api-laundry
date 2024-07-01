@@ -53,3 +53,5 @@ CREATE TABLE bill_details (
   FOREIGN KEY (bill_id) REFERENCES bills(id),
   FOREIGN KEY (product_id) REFERENCES products(id)
 );
+
+
